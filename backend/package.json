@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:unit": "jest --testPathPattern=services|middleware",
+    "test:integration": "jest --testPathPattern=routes"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +19,22 @@
     "node-cron": "^4.2.1",
     "nodemon": "^3.1.11",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.1.4"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "**/*.js",
+      "!**/node_modules/**",
+      "!**/coverage/**",
+      "!jest.config.js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
   }
 }
