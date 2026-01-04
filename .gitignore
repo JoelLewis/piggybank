@@ -1,1 +1,9 @@
-node_modules/\n.env\ndist/\n.astro/\n.DS_Store
+node_modules/
+.env
+dist/
+.astro/
+.DS_Store
+coverage/
+data/
+*.db
+*.db-journal
