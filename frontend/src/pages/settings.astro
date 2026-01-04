@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
+---
+
+<BaseLayout title="Global Settings">
+  <div class="max-w-xl mx-auto py-8 space-y-6">
+    <a href="/" class="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors">
+        <ArrowLeft size={18} /> Dashboard
+    </a>
+    <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+      <h2 class="text-3xl font-black text-slate-900 mb-6">Security & Preferences</h2>
+      
+      <div class="bg-indigo-50 text-indigo-800 p-4 rounded-xl mb-6 text-sm font-medium">
+        Settings are currently read-only in this version.
+      </div>
+
+      <div class="space-y-8">
+        <div class="p-6 bg-slate-50 rounded-3xl opacity-60">
+          <div class="flex items-center gap-3 mb-2 text-indigo-600">
+            <ShieldCheck size={24} />
+            <h3 class="font-bold">Parental PIN</h3>
+          </div>
+          <p class="text-sm text-slate-500 mb-6">When active, withdrawals and settings require a PIN code.</p>
+          <div class="flex gap-4">
+             <div class="bg-white border border-slate-200 px-4 py-3 rounded-xl text-center font-black tracking-[0.5em] w-32 text-slate-300">
+                ----
+             </div>
+             <button disabled class="bg-slate-300 text-white px-8 py-3 rounded-xl font-bold cursor-not-allowed">
+                Activate
+             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

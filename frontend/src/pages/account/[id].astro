@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TransactionForm from '../../components/TransactionForm';
+import TransactionList from '../../components/TransactionList';
+import { getAccount, getTransactions, calculateInterest } from '../../utils/api';
+import { ArrowLeft, RefreshCw, Settings } from 'lucide-react';
+
+const { id } = Astro.params;
+
+if (!id) {
+    return Astro.redirect('/');
+}
+
+let account = null;
+let transactions = [];
+let error = null;
+
+try {
+  account = await getAccount(id);
+  transactions = await getTransactions(id);
+} catch (e) {
+  error = e.message;
+}
+
+// Handle POST actions (interest calculation) if form submitted to this page
+if (Astro.request.method === 'POST') {
+    try {
+        const formData = await Astro.request.formData();
+        if (formData.get('action') === 'calculate_interest') {
+            await calculateInterest(id);
+            // Reload data
+             account = await getAccount(id);
+             transactions = await getTransactions(id);
+        }
+    } catch (e) {
+        // Handle error
+    }
+}
+---
+
+<BaseLayout title={account ? `${account.name}'s Account` : 'Account Details'}>
+    {error ? (
+        <div class="text-center py-20">
+            <h1 class="text-2xl font-bold text-slate-800">Account Not Found</h1>
+            <a href="/" class="text-indigo-600 underline mt-4 inline-block">Return Home</a>
+        </div>
+    ) : (
+        <div class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <a href="/" class="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors inline-block mb-4">
+                <ArrowLeft size={18} /> Back to Dashboard
+            </a>
+
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900">{account.name}</h1>
+                    <p class="text-slate-500 text-sm font-medium mt-2">Managing growth since {new Date(account.created_at).toLocaleDateString()}</p>
+                </div>
+                <div class="bg-indigo-600 text-white p-6 rounded-3xl shadow-lg shadow-indigo-100 min-w-[240px]">
+                    <div class="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Current Balance</div>
+                    <div class="text-4xl font-black">${Number(account.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+                <div class="lg:col-span-1 space-y-6">
+                    <TransactionForm accountId={id} client:load onTransactionSuccess={() => { window.location.reload(); }} />
+
+                    <div class="bg-slate-900 rounded-3xl p-6 text-white relative overflow-hidden group">
+                        <RefreshCw className="absolute -right-6 -bottom-6 text-slate-800 opacity-50 group-hover:rotate-180 transition-transform duration-1000" size={160} />
+                        <div class="relative z-10">
+                            <div class="text-xs font-bold uppercase text-slate-400 mb-1">Auto-Compounding</div>
+                            <div class="text-2xl font-black mb-1">{(account.interest_rate * 100).toFixed(1)}% APY</div>
+                            <div class="text-xs text-slate-500 mb-6">Compounded {account.compounding_period}</div>
+                            
+                            <form method="POST">
+                                <input type="hidden" name="action" value="calculate_interest" />
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition-colors shadow-lg shadow-indigo-900/20 active:scale-95">
+                                    Check & Pay Interest
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <button class="w-full py-3 text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-colors">
+                        <Settings size={18} /> Account Settings
+                    </button>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <TransactionList transactions={transactions} client:visible />
+                </div>
+            </div>
+        </div>
+    )}
+</BaseLayout>

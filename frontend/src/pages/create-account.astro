@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { ArrowLeft } from 'lucide-react';
+import { createAccount } from '../utils/api';
+
+if (Astro.request.method === 'POST') {
+    try {
+        const data = await Astro.request.formData();
+        const name = data.get('name');
+        const interest_rate = parseFloat(data.get('interest_rate') as string) / 100;
+        const compounding_period = data.get('compounding_period');
+        
+        await createAccount({
+            name,
+            interest_rate,
+            compounding_period,
+            initial_balance: 0
+        });
+        
+        return Astro.redirect('/');
+    } catch (error) {
+        console.error("Creation failed", error);
+    }
+}
+
+const COMPOUNDING_PERIODS = ['daily', 'weekly', 'monthly', 'quarterly', 'annually'];
+---
+
+<BaseLayout title="Create Account">
+    <div class="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <a href="/" class="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors">
+            <ArrowLeft size={18} /> Cancel
+        </a>
+        
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
+            <h2 class="text-3xl font-black mb-8 text-slate-900">New Account</h2>
+            
+            <form method="POST" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Child's Name</label>
+                    <input 
+                        type="text" 
+                        name="name"
+                        required
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500" 
+                        placeholder="e.g. Sam" 
+                    />
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-2">Interest APY %</label>
+                        <input 
+                            type="number" 
+                            name="interest_rate"
+                            defaultValue="5"
+                            step="0.1"
+                            class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500" 
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black uppercase text-slate-400 mb-2">Compounding</label>
+                        <select 
+                            name="compounding_period"
+                            class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-slate-800 capitalize focus:ring-2 focus:ring-indigo-500"
+                        >
+                            {COMPOUNDING_PERIODS.map(p => (
+                                <option value={p} selected={p === 'monthly'}>{p}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                
+                <button 
+                    type="submit" 
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-3xl font-black text-lg shadow-lg shadow-indigo-100 transition-all active:scale-95 mt-4"
+                >
+                    Open Account
+                </button>
+            </form>
+        </div>
+    </div>
+</BaseLayout>

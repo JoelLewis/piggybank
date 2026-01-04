@@ -1,0 +1,51 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AccountCard from '../components/AccountCard';
+import { PlusCircle } from 'lucide-react';
+import { getAccounts } from '../utils/api';
+
+let accounts = [];
+let error = null;
+
+try {
+  accounts = await getAccounts();
+} catch (e) {
+  error = e.message;
+  console.error("Error fetching accounts:", e);
+}
+---
+
+<BaseLayout title="Piggybank - Dashboard">
+  <div class="space-y-8 animate-in fade-in duration-500">
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">Accounts</h1>
+      <a href="/create-account" class="bg-indigo-600 text-white p-3 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95">
+        <PlusCircle size={24} />
+      </a>
+    </div>
+
+    {error && (
+      <div class="bg-rose-50 text-rose-600 p-4 rounded-xl border border-rose-100">
+        <p class="font-bold">Error loading accounts</p>
+        <p class="text-sm">{error}</p>
+        <p class="text-xs mt-2">Make sure the backend is running.</p>
+      </div>
+    )}
+
+    {accounts.length === 0 && !error ? (
+        <div class="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200">
+            <h3 class="text-xl font-bold text-slate-800 mb-2">No accounts yet</h3>
+            <p class="text-slate-400 mb-6">Create your first piggybank to get started!</p>
+            <a href="/create-account" class="inline-block bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors">
+                Create Account
+            </a>
+        </div>
+    ) : (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {accounts.map((a: any) => (
+            <AccountCard account={a} client:load />
+        ))}
+        </div>
+    )}
+  </div>
+</BaseLayout>
