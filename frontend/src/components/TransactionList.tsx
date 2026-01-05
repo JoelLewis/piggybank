@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { History } from 'lucide-react';
 
 interface Transaction {
@@ -16,6 +16,13 @@ interface TransactionListProps {
 }
 
 export default function TransactionList({ transactions }: TransactionListProps) {
+  // Memoize sorted transactions to prevent re-sorting on every render and avoid mutating props
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) =>
+      new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+    );
+  }, [transactions]);
+
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mt-8">
         <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
@@ -32,7 +39,7 @@ export default function TransactionList({ transactions }: TransactionListProps) 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {transactions.sort((a,b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()).map(tx => (
+              {sortedTransactions.map(tx => (
                 <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-slate-600">
                     {new Date(tx.transaction_date).toLocaleDateString()}
