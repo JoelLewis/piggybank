@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Loader2 } from 'lucide-react';
 import { createTransaction } from '../utils/api';
 
 interface TransactionFormProps {
@@ -71,6 +71,7 @@ export default function TransactionForm({ accountId, onTransactionSuccess }: Tra
             type="number" 
             step="0.01"
             placeholder="0.00" 
+            aria-label="Transaction Amount"
             className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-lg" 
             value={amount} 
             onChange={(e) => setAmount(e.target.value)}
@@ -78,13 +79,15 @@ export default function TransactionForm({ accountId, onTransactionSuccess }: Tra
           />
         </div>
 
-        <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Category</label>
+        <div role="radiogroup" aria-labelledby="category-label">
+            <label id="category-label" className="block text-xs font-bold text-slate-400 mb-1 uppercase">Category</label>
             <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES[type].map(c => (
                     <button
                         key={c}
                         type="button"
+                        role="radio"
+                        aria-checked={category === c}
                         onClick={() => setCategory(c)}
                         className={`text-xs font-bold py-2 px-3 rounded-lg border transition-all ${category === c ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'}`}
                     >
@@ -97,6 +100,7 @@ export default function TransactionForm({ accountId, onTransactionSuccess }: Tra
         <input 
           type="text" 
           placeholder="Note (optional)" 
+          aria-label="Transaction Note"
           className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium" 
           value={note} 
           onChange={(e) => setNote(e.target.value)}
@@ -107,8 +111,9 @@ export default function TransactionForm({ accountId, onTransactionSuccess }: Tra
         <button 
           type="submit" 
           disabled={loading}
-          className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${type === 'deposit' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+          className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${type === 'deposit' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}
         >
+          {loading && <Loader2 className="animate-spin" size={20} />}
           {loading ? 'Processing...' : `Post ${type.charAt(0).toUpperCase() + type.slice(1)}`}
         </button>
       </form>
