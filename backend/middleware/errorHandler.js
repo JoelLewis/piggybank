@@ -9,7 +9,7 @@ const errorHandler = (err, req, res, next) => {
         return res.status(404).json({ error: 'Account not found' });
     }
 
-    res.status(500).json({ error: err.message || 'Internal Server Error' });
+    res.status(500).json({ error: 'Internal Server Error' });
 };
 
 module.exports = errorHandler;
