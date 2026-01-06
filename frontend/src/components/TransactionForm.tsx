@@ -51,12 +51,13 @@ export default function TransactionForm({ accountId, onTransactionSuccess }: Tra
     <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full">
       <h3 className="font-bold text-slate-800 mb-4">New Transaction</h3>
       
-      <div className="flex bg-slate-100 p-1 rounded-xl mb-4">
+      <div className="flex bg-slate-100 p-1 rounded-xl mb-4" role="group" aria-label="Transaction Type">
         {(['deposit', 'withdrawal'] as const).map(t => (
           <button 
             key={t} 
             type="button"
             onClick={() => { setType(t); setCategory(''); }} 
+            aria-pressed={type === t}
             className={`flex-1 py-2 rounded-lg text-sm font-bold capitalize transition-all ${type === t ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
           >
             {t}
