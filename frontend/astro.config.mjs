@@ -15,6 +15,9 @@ export default defineConfig({
     host: true
   },
   vite: {
+    ssr: {
+      noExternal: ['lucide-react']
+    },
     server: {
       proxy: {
         '/api': {
