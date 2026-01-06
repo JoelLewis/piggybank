@@ -204,6 +204,7 @@ export default function TransactionList({ transactions }: TransactionListProps) 
                         onClick={() => handleEdit(tx)}
                         className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                         title="Edit transaction"
+                        aria-label={`Edit transaction for ${tx.category}`}
                       >
                         <Edit2 size={14} />
                       </button>
@@ -211,6 +212,7 @@ export default function TransactionList({ transactions }: TransactionListProps) 
                         onClick={() => handleDelete(tx.id)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
                         title="Delete transaction"
+                        aria-label={`Delete transaction for ${tx.category}`}
                       >
                         <Trash2 size={14} />
                       </button>
