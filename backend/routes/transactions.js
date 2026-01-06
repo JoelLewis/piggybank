@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const TransactionManager = require('../services/transactionManager');
 const InterestCalculator = require('../services/interestCalculator');
+const { validateTransaction, validateTransactionUpdate } = require('../middleware/validation');
 
 // GET transactions for account
 router.get('/accounts/:accountId/transactions', async (req, res, next) => {
@@ -15,11 +16,11 @@ router.get('/accounts/:accountId/transactions', async (req, res, next) => {
 });
 
 // POST create transaction
-router.post('/accounts/:accountId/transactions', async (req, res, next) => {
+router.post('/accounts/:accountId/transactions', validateTransaction, async (req, res, next) => {
   try {
     const { accountId } = req.params;
     const { type, category, amount, note, transaction_date } = req.body;
-    
+
     const transaction = await TransactionManager.createTransaction({
       accountId,
       type,
@@ -28,8 +29,38 @@ router.post('/accounts/:accountId/transactions', async (req, res, next) => {
       note,
       transaction_date
     });
-    
+
     res.status(201).json(transaction);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT update transaction
+router.put('/transactions/:id', validateTransactionUpdate, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { amount, category, note, transaction_date } = req.body;
+
+    const transaction = await TransactionManager.updateTransaction(id, {
+      amount,
+      category,
+      note,
+      transaction_date
+    });
+
+    res.json(transaction);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE soft delete transaction
+router.delete('/transactions/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await TransactionManager.deleteTransaction(id);
+    res.json(result);
   } catch (error) {
     next(error);
   }
