@@ -1,0 +1,4 @@
+## 2026-01-06 - CORS Misconfiguration and Security Headers
+**Vulnerability:** The backend server (`server.js`) was configured with `app.use(cors())`, which defaults to allowing requests from any origin (`*`). This could allow malicious websites to make unauthorized requests to the local or public backend. Additionally, standard security headers were missing.
+**Learning:** Default configurations in libraries like `cors` prioritize ease of use over security. Monorepos with separate frontend/backend services need explicit origin policies even in development.
+**Prevention:** Always configure `cors` with a specific origin or list of allowed origins (e.g., using `process.env.ALLOWED_ORIGINS`). Implement "Defense in Depth" by adding security headers (Content-Type-Options, Frame-Options, XSS-Protection) and restricting error information leakage in production.
