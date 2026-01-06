@@ -1,0 +1,196 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getAccount } from '../../../utils/api';
+import { ArrowLeft, Save, Trash2 } from 'lucide-react';
+
+const { id } = Astro.params;
+
+if (!id) {
+    return Astro.redirect('/');
+}
+
+let account = null;
+let error = null;
+let success = null;
+
+try {
+    account = await getAccount(id);
+} catch (e) {
+    error = e.message;
+}
+
+// Handle POST (form submission)
+if (Astro.request.method === 'POST') {
+    try {
+        const formData = await Astro.request.formData();
+        const action = formData.get('action');
+
+        if (action === 'update') {
+            const name = formData.get('name');
+            const interest_rate = parseFloat(formData.get('interest_rate'));
+            const compounding_period = formData.get('compounding_period');
+
+            const response = await fetch(`${process.env.INTERNAL_API_URL || 'http://localhost:4000/api'}/accounts/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, interest_rate, compounding_period })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                error = err.error || 'Failed to update account';
+            } else {
+                success = 'Account updated successfully';
+                account = await getAccount(id);
+            }
+        } else if (action === 'delete') {
+            const response = await fetch(`${process.env.INTERNAL_API_URL || 'http://localhost:4000/api'}/accounts/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                return Astro.redirect('/');
+            } else {
+                error = 'Failed to delete account';
+            }
+        }
+    } catch (e) {
+        error = e.message;
+    }
+}
+---
+
+<BaseLayout title={account ? `${account.name} - Settings` : 'Account Settings'}>
+    {!account ? (
+        <div class="text-center py-20">
+            <h1 class="text-2xl font-bold text-slate-800">Account Not Found</h1>
+            <a href="/" class="text-indigo-600 underline mt-4 inline-block">Return Home</a>
+        </div>
+    ) : (
+        <div class="max-w-2xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <a href={`/account/${id}`} class="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors inline-block mb-4">
+                <ArrowLeft size={18} /> Back to Account
+            </a>
+
+            <div>
+                <h1 class="text-4xl font-black text-slate-900">{account.name}</h1>
+                <p class="text-slate-500 mt-2">Account Settings</p>
+            </div>
+
+            {error && (
+                <div class="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl">
+                    {error}
+                </div>
+            )}
+
+            {success && (
+                <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl">
+                    {success}
+                </div>
+            )}
+
+            <form method="POST" class="bg-white border border-slate-200 rounded-3xl p-8 space-y-6">
+                <input type="hidden" name="action" value="update" />
+
+                <div>
+                    <label for="name" class="block text-sm font-bold text-slate-700 mb-2">
+                        Account Name
+                    </label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={account.name}
+                        required
+                        maxlength="50"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                </div>
+
+                <div>
+                    <label for="interest_rate" class="block text-sm font-bold text-slate-700 mb-2">
+                        Interest Rate (Annual)
+                    </label>
+                    <div class="flex gap-2 items-center">
+                        <input
+                            type="number"
+                            id="interest_rate"
+                            name="interest_rate"
+                            value={(account.interest_rate * 100).toFixed(2)}
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            required
+                            class="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                        <span class="text-slate-600 font-bold">%</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Enter as percentage (e.g., 5 for 5% annual interest)</p>
+                </div>
+
+                <div>
+                    <label for="compounding_period" class="block text-sm font-bold text-slate-700 mb-2">
+                        Compounding Period
+                    </label>
+                    <select
+                        id="compounding_period"
+                        name="compounding_period"
+                        required
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    >
+                        <option value="daily" selected={account.compounding_period === 'daily'}>Daily</option>
+                        <option value="weekly" selected={account.compounding_period === 'weekly'}>Weekly</option>
+                        <option value="monthly" selected={account.compounding_period === 'monthly'}>Monthly</option>
+                        <option value="quarterly" selected={account.compounding_period === 'quarterly'}>Quarterly</option>
+                        <option value="annually" selected={account.compounding_period === 'annually'}>Annually</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3">
+                    <button
+                        type="submit"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-95"
+                    >
+                        <Save size={18} /> Save Changes
+                    </button>
+                    <a
+                        href={`/account/${id}`}
+                        class="px-6 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl transition-colors"
+                    >
+                        Cancel
+                    </a>
+                </div>
+            </form>
+
+            <div class="bg-rose-50 border border-rose-200 rounded-3xl p-8">
+                <h2 class="text-lg font-black text-rose-900 mb-2">Danger Zone</h2>
+                <p class="text-sm text-rose-700 mb-4">
+                    Deleting this account will archive it along with all transaction history. This action cannot be undone.
+                </p>
+                <form method="POST" onsubmit="return confirm('Are you sure you want to delete this account? This cannot be undone.')">
+                    <input type="hidden" name="action" value="delete" />
+                    <button
+                        type="submit"
+                        class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center gap-2 active:scale-95"
+                    >
+                        <Trash2 size={18} /> Delete Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    )}
+</BaseLayout>
+
+<script>
+    // Convert percentage input to decimal for API
+    const form = document.querySelector('form[method="POST"]');
+    if (form && !form.querySelector('[name="action"][value="delete"]')) {
+        form.addEventListener('submit', (e) => {
+            const interestInput = form.querySelector('[name="interest_rate"]') as HTMLInputElement;
+            if (interestInput) {
+                const percentValue = parseFloat(interestInput.value);
+                interestInput.value = (percentValue / 100).toString();
+            }
+        });
+    }
+</script>

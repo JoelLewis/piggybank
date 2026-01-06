@@ -2,8 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TransactionForm from '../../components/TransactionForm';
 import TransactionList from '../../components/TransactionList';
-import { getAccount, getTransactions, calculateInterest } from '../../utils/api';
-import { ArrowLeft, RefreshCw, Settings } from 'lucide-react';
+import { getAccount, getTransactions, calculateInterest, getAccountStatistics } from '../../utils/api';
+import { ArrowLeft, RefreshCw, Settings, TrendingUp, TrendingDown, DollarSign, Calendar } from 'lucide-react';
 
 const { id } = Astro.params;
 
@@ -13,11 +13,13 @@ if (!id) {
 
 let account = null;
 let transactions = [];
+let statistics = null;
 let error = null;
 
 try {
   account = await getAccount(id);
   transactions = await getTransactions(id);
+  statistics = await getAccountStatistics(id);
 } catch (e) {
   error = e.message;
 }
@@ -31,6 +33,7 @@ if (Astro.request.method === 'POST') {
             // Reload data
              account = await getAccount(id);
              transactions = await getTransactions(id);
+             statistics = await getAccountStatistics(id);
         }
     } catch (e) {
         // Handle error
@@ -61,6 +64,39 @@ if (Astro.request.method === 'POST') {
                 </div>
             </div>
 
+            {statistics && (
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 text-emerald-600 mb-1">
+                            <TrendingUp size={16} />
+                            <span class="text-xs font-bold uppercase">Total Deposits</span>
+                        </div>
+                        <div class="text-2xl font-black text-slate-900">${statistics.total_deposits.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 text-rose-600 mb-1">
+                            <TrendingDown size={16} />
+                            <span class="text-xs font-bold uppercase">Total Withdrawals</span>
+                        </div>
+                        <div class="text-2xl font-black text-slate-900">${statistics.total_withdrawals.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 text-indigo-600 mb-1">
+                            <DollarSign size={16} />
+                            <span class="text-xs font-bold uppercase">Interest Earned</span>
+                        </div>
+                        <div class="text-2xl font-black text-slate-900">${statistics.total_interest_earned.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 text-slate-600 mb-1">
+                            <Calendar size={16} />
+                            <span class="text-xs font-bold uppercase">Account Age</span>
+                        </div>
+                        <div class="text-2xl font-black text-slate-900">{statistics.account_age_days} days</div>
+                    </div>
+                </div>
+            )}
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
                 <div class="lg:col-span-1 space-y-6">
                     <TransactionForm accountId={id} client:load onTransactionSuccess={() => { window.location.reload(); }} />
@@ -70,8 +106,16 @@ if (Astro.request.method === 'POST') {
                         <div class="relative z-10">
                             <div class="text-xs font-bold uppercase text-slate-400 mb-1">Auto-Compounding</div>
                             <div class="text-2xl font-black mb-1">{(account.interest_rate * 100).toFixed(1)}% APY</div>
-                            <div class="text-xs text-slate-500 mb-6">Compounded {account.compounding_period}</div>
-                            
+                            <div class="text-xs text-slate-500 mb-4">Compounded {account.compounding_period}</div>
+
+                            {statistics && statistics.next_interest_amount > 0 && (
+                                <div class="bg-slate-800 rounded-xl p-3 mb-4">
+                                    <div class="text-xs text-slate-400">Next Payment</div>
+                                    <div class="text-lg font-bold text-emerald-400">+${statistics.next_interest_amount.toFixed(2)}</div>
+                                    <div class="text-xs text-slate-500">{new Date(statistics.next_interest_date).toLocaleDateString()}</div>
+                                </div>
+                            )}
+
                             <form method="POST">
                                 <input type="hidden" name="action" value="calculate_interest" />
                                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition-colors shadow-lg shadow-indigo-900/20 active:scale-95">
@@ -81,9 +125,9 @@ if (Astro.request.method === 'POST') {
                         </div>
                     </div>
 
-                    <button class="w-full py-3 text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-colors">
+                    <a href={`/account/${id}/settings`} class="w-full py-3 text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-colors">
                         <Settings size={18} /> Account Settings
-                    </button>
+                    </a>
                 </div>
 
                 <div class="lg:col-span-2">
