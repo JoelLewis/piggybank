@@ -1,3 +1,17 @@
+// Category definitions - Single Source of Truth
+const DEPOSIT_CATEGORIES = ['Allowance', 'Tooth Fairy', 'Gift', 'Chore', 'Other'];
+const WITHDRAWAL_CATEGORIES = ['Toy', 'Candy', 'Savings Goal', 'Other'];
+const INTEREST_CATEGORIES = ['Interest'];
+
+// Combined list for validation where type is unknown
+const ALL_VALID_CATEGORIES = [
+    ...new Set([
+        ...DEPOSIT_CATEGORIES,
+        ...WITHDRAWAL_CATEGORIES,
+        ...INTEREST_CATEGORIES
+    ])
+];
+
 const validateAccount = (req, res, next) => {
     const { name, interest_rate, initial_balance, compounding_period } = req.body;
 
@@ -45,8 +59,14 @@ const validateAccount = (req, res, next) => {
     next();
 };
 
+const isValidDate = (dateString) => {
+    if (typeof dateString !== 'string') return false;
+    const date = new Date(dateString);
+    return !isNaN(date.getTime()); // Check if valid date
+};
+
 const validateTransaction = (req, res, next) => {
-    const { type, category, amount, note } = req.body;
+    const { type, category, amount, note, transaction_date } = req.body;
 
     // Validate transaction type
     if (!type || typeof type !== 'string') {
@@ -65,17 +85,13 @@ const validateTransaction = (req, res, next) => {
         return res.status(400).json({ error: 'Transaction category is required' });
     }
 
-    const depositCategories = ['Allowance', 'Tooth Fairy', 'Gift', 'Chore', 'Other'];
-    const withdrawalCategories = ['Toy', 'Candy', 'Savings Goal', 'Other'];
-    const interestCategories = ['Interest'];
-
     let validCategories = [];
     if (type === 'deposit') {
-        validCategories = depositCategories;
+        validCategories = DEPOSIT_CATEGORIES;
     } else if (type === 'withdrawal') {
-        validCategories = withdrawalCategories;
+        validCategories = WITHDRAWAL_CATEGORIES;
     } else if (type === 'interest') {
-        validCategories = interestCategories;
+        validCategories = INTEREST_CATEGORIES;
     }
 
     if (!validCategories.includes(category)) {
@@ -112,11 +128,18 @@ const validateTransaction = (req, res, next) => {
         }
     }
 
+    // Validate transaction_date if provided
+    if (transaction_date !== undefined) {
+        if (!isValidDate(transaction_date)) {
+             return res.status(400).json({ error: 'Transaction date must be a valid ISO 8601 date string' });
+        }
+    }
+
     next();
 };
 
 const validateTransactionUpdate = (req, res, next) => {
-    const { amount, category, note } = req.body;
+    const { amount, category, note, transaction_date } = req.body;
 
     // Validate amount if provided
     if (amount !== undefined) {
@@ -132,10 +155,16 @@ const validateTransactionUpdate = (req, res, next) => {
         }
     }
 
-    // Validate category if provided (note: we can't validate against type here since we don't have it)
+    // Validate category if provided
     if (category !== undefined) {
         if (typeof category !== 'string' || category.trim() === '') {
             return res.status(400).json({ error: 'Category must be a non-empty string' });
+        }
+
+        if (!ALL_VALID_CATEGORIES.includes(category)) {
+             return res.status(400).json({
+                 error: 'Invalid category. Must be one of the predefined categories.'
+             });
         }
     }
 
@@ -146,6 +175,13 @@ const validateTransactionUpdate = (req, res, next) => {
         }
         if (note.length > 200) {
             return res.status(400).json({ error: 'Note must not exceed 200 characters' });
+        }
+    }
+
+    // Validate transaction_date if provided
+    if (transaction_date !== undefined) {
+        if (!isValidDate(transaction_date)) {
+             return res.status(400).json({ error: 'Transaction date must be a valid ISO 8601 date string' });
         }
     }
 
