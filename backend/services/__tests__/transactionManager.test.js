@@ -291,26 +291,31 @@ describe('TransactionManager', () => {
 
       await TransactionManager.recalculateBalances(1);
 
-      // Should update each transaction's balance_after
-      expect(db.run).toHaveBeenCalledTimes(5); // 4 transactions + 1 account update
+      // 1 BEGIN + 4 transactions + 1 account update + 1 COMMIT = 7 calls
+      expect(db.run).toHaveBeenCalledTimes(7);
 
-      // Check the balance calculations
       const calls = db.run.mock.calls;
 
-      // First transaction: +100 = 100
-      expect(calls[0][1][0]).toBe('100.00');
+      // Call 0: BEGIN
+      expect(calls[0][0]).toBe('BEGIN TRANSACTION');
 
-      // Second transaction: 100-30 = 70
-      expect(calls[1][1][0]).toBe('70.00');
+      // Call 1: First transaction: +100 = 100
+      expect(calls[1][1][0]).toBe('100.00');
 
-      // Third transaction: 70+5 = 75
-      expect(calls[2][1][0]).toBe('75.00');
+      // Call 2: Second transaction: 100-30 = 70
+      expect(calls[2][1][0]).toBe('70.00');
 
-      // Fourth transaction: 75-10 = 65
-      expect(calls[3][1][0]).toBe('65.00');
+      // Call 3: Third transaction: 70+5 = 75
+      expect(calls[3][1][0]).toBe('75.00');
 
-      // Final account balance: 65
+      // Call 4: Fourth transaction: 75-10 = 65
       expect(calls[4][1][0]).toBe('65.00');
+
+      // Call 5: Final account balance: 65
+      expect(calls[5][1][0]).toBe('65.00');
+
+      // Call 6: COMMIT
+      expect(calls[6][0]).toBe('COMMIT');
     });
 
     it('should handle zero transactions', async () => {
@@ -319,12 +324,25 @@ describe('TransactionManager', () => {
 
       await TransactionManager.recalculateBalances(1);
 
-      // Should still update account balance to 0
-      expect(db.run).toHaveBeenCalledTimes(1);
-      expect(db.run).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE accounts'),
-        ['0.00', 1]
-      );
+      // 1 BEGIN + 0 transactions + 1 account update + 1 COMMIT = 3 calls
+      expect(db.run).toHaveBeenCalledTimes(3);
+
+      const calls = db.run.mock.calls;
+      expect(calls[0][0]).toBe('BEGIN TRANSACTION');
+
+      expect(calls[1][0]).toContain('UPDATE accounts');
+      expect(calls[1][1][0]).toBe('0.00');
+
+      expect(calls[2][0]).toBe('COMMIT');
+    });
+
+    it('should rollback on error', async () => {
+      db.run.mockResolvedValue({}); // For BEGIN
+      db.all.mockRejectedValueOnce(new Error('DB Error'));
+
+      await expect(TransactionManager.recalculateBalances(1)).rejects.toThrow('DB Error');
+
+      expect(db.run).toHaveBeenCalledWith('ROLLBACK');
     });
 
     it('should return the final balance', async () => {
