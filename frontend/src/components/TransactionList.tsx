@@ -122,6 +122,7 @@ export default function TransactionList({ transactions }: TransactionListProps) 
               setFilterType(e.target.value);
               setCurrentPage(1);
             }}
+            aria-label="Filter by transaction type"
             className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">All Types</option>
@@ -136,6 +137,7 @@ export default function TransactionList({ transactions }: TransactionListProps) 
               setFilterCategory(e.target.value);
               setCurrentPage(1);
             }}
+            aria-label="Filter by category"
             className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="all">All Categories</option>
@@ -280,8 +282,9 @@ export default function TransactionList({ transactions }: TransactionListProps) 
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Amount</label>
+                <label htmlFor="edit-amount" className="block text-sm font-bold text-slate-700 mb-1">Amount</label>
                 <input
+                  id="edit-amount"
                   type="number"
                   step="0.01"
                   value={editForm.amount}
@@ -291,8 +294,9 @@ export default function TransactionList({ transactions }: TransactionListProps) 
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
+                <label htmlFor="edit-category" className="block text-sm font-bold text-slate-700 mb-1">Category</label>
                 <input
+                  id="edit-category"
                   type="text"
                   value={editForm.category}
                   onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
@@ -301,8 +305,9 @@ export default function TransactionList({ transactions }: TransactionListProps) 
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">Note (optional)</label>
+                <label htmlFor="edit-note" className="block text-sm font-bold text-slate-700 mb-1">Note (optional)</label>
                 <textarea
+                  id="edit-note"
                   value={editForm.note}
                   onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
                   maxLength={200}
