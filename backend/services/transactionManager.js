@@ -54,40 +54,50 @@ class TransactionManager {
   }
 
   async recalculateBalances(accountId) {
-    // Get all non-deleted transactions in chronological order
-    const transactions = await db.all(
-      `SELECT * FROM transactions
-       WHERE account_id = ? AND deleted_at IS NULL
-       ORDER BY transaction_date ASC, id ASC`,
-      [accountId]
-    );
+    // Start a transaction for the entire recalculation process
+    // This significantly improves performance by batching updates (N+1 fix)
+    await db.run('BEGIN TRANSACTION');
 
-    let runningBalance = 0;
+    try {
+      // Get all non-deleted transactions in chronological order
+      const transactions = await db.all(
+        `SELECT * FROM transactions
+         WHERE account_id = ? AND deleted_at IS NULL
+         ORDER BY transaction_date ASC, id ASC`,
+        [accountId]
+      );
 
-    // Recalculate balance for each transaction
-    for (const tx of transactions) {
-      const txAmount = parseFloat(tx.amount);
+      let runningBalance = 0;
 
-      if (tx.type === 'deposit' || tx.type === 'interest') {
-        runningBalance += txAmount;
-      } else if (tx.type === 'withdrawal') {
-        runningBalance -= txAmount;
+      // Recalculate balance for each transaction
+      for (const tx of transactions) {
+        const txAmount = parseFloat(tx.amount);
+
+        if (tx.type === 'deposit' || tx.type === 'interest') {
+          runningBalance += txAmount;
+        } else if (tx.type === 'withdrawal') {
+          runningBalance -= txAmount;
+        }
+
+        // Update balance_after for this transaction
+        await db.run(
+          'UPDATE transactions SET balance_after = ? WHERE id = ?',
+          [runningBalance.toFixed(2), tx.id]
+        );
       }
 
-      // Update balance_after for this transaction
+      // Update account's current balance
       await db.run(
-        'UPDATE transactions SET balance_after = ? WHERE id = ?',
-        [runningBalance.toFixed(2), tx.id]
+        'UPDATE accounts SET balance = ?, updated_at = datetime(\'now\') WHERE id = ?',
+        [runningBalance.toFixed(2), accountId]
       );
+
+      await db.run('COMMIT');
+      return runningBalance;
+    } catch (error) {
+      await db.run('ROLLBACK');
+      throw error;
     }
-
-    // Update account's current balance
-    await db.run(
-      'UPDATE accounts SET balance = ?, updated_at = datetime(\'now\') WHERE id = ?',
-      [runningBalance.toFixed(2), accountId]
-    );
-
-    return runningBalance;
   }
 
   async updateTransaction(transactionId, { amount, category, note, transaction_date }) {
