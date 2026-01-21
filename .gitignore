@@ -3,4 +3,8 @@ node_modules/
 dist/
 .astro/
 .DS_Store
-data/
+data/*
+!data/README.md
+!data/backups/
+data/backups/*
+!data/backups/.gitkeep
