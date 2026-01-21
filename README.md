@@ -1,6 +1,6 @@
 # Piggybank App
 
-A self-hosted virtual piggybank for teaching financial literacy to children. Built with Astro (Frontend) and Express (Backend), designed for easy self-hosting via Docker.
+A self-hosted virtual piggybank for teaching financial literacy to children. Built with Astro (Frontend) and Express (Backend), with support for both Docker self-hosting and Cloudflare Pages deployment.
 
 ## Features
 
@@ -10,7 +10,33 @@ A self-hosted virtual piggybank for teaching financial literacy to children. Bui
 - **Security**: Optional parent PIN (Coming Soon).
 - **Self-Hosted**: Full control over your data with SQLite.
 
-## Quick Start (Docker)
+## Deployment Options
+
+### Option 1: Cloudflare Pages (Free, Serverless) ⭐ NEW
+
+Deploy to Cloudflare Pages free tier with serverless functions and D1 database.
+
+**Benefits:**
+- 🆓 Completely free (within generous limits)
+- 🚀 Global CDN and automatic scaling
+- 📊 Automatic backups and monitoring
+- 🔒 Built-in DDoS protection
+
+**Quick Deploy:**
+```bash
+cd frontend
+npm install
+npm run build
+
+# Create D1 database and deploy
+wrangler d1 create piggybank-db
+wrangler d1 execute piggybank-db --file=./migrations/0001_initial_schema.sql
+wrangler pages deploy dist --project-name=piggybank
+```
+
+📖 **Full instructions**: See [CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md)
+
+### Option 2: Docker (Self-Hosted)
 
 1.  **Clone the repository**:
     ```bash
@@ -61,6 +87,11 @@ A self-hosted virtual piggybank for teaching financial literacy to children. Bui
 2.  Install Docker and Docker Compose inside the LXC.
 3.  Clone this repo and run `docker-compose up -d`.
 4.  (Optional) Use a reverse proxy like Caddy or Nginx to serve on a domain.
+
+## Documentation
+
+- **[CLOUDFLARE_DEPLOYMENT.md](./CLOUDFLARE_DEPLOYMENT.md)** - Deploy to Cloudflare Pages (serverless)
+- **[MIGRATION_SUMMARY.md](./MIGRATION_SUMMARY.md)** - Technical migration details
 
 ## License
 

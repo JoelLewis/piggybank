@@ -1,16 +1,7 @@
 // src/utils/api.ts
 
-// Determine base URL based on environment (SSR vs Client)
-const getBaseUrl = () => {
-  if (import.meta.env.SSR) {
-    // When running on the server (SSR), use the internal Docker/localhost URL
-    return process.env.INTERNAL_API_URL || 'http://localhost:4000/api';
-  }
-  // When running on the client, use the public URL or relative path (proxy)
-  return import.meta.env.PUBLIC_API_URL || '/api';
-};
-
-const API_BASE = getBaseUrl();
+// For Cloudflare Pages, all API calls go to /api which are handled by Pages Functions
+const API_BASE = '/api';
 
 export async function getAccounts() {
   const response = await fetch(`${API_BASE}/accounts`);
