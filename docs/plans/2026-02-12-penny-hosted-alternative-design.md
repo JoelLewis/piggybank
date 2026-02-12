@@ -14,7 +14,7 @@ Penny is a hosted, multi-tenant SaaS alternative to the self-hosted Piggybank ap
 |----------|--------|-----------|
 | Hosting platform | Cloudflare Pages + Workers | Affordable, serverless, global edge |
 | User model | Multi-tenant SaaS | Single deployment serving all families |
-| Authentication | Cloudflare Access + Google OAuth | Zero custom auth code, secure by default |
+| Authentication | better-auth + Google OAuth | Self-hosted auth in D1, Penny-branded login, no per-user cost, future-ready for magic links |
 | Database | Cloudflare D1 (SQLite-compatible) | Existing SQL queries port directly |
 | Frontend framework | Astro + React + Tailwind | Reuse piggybank stack, first-class CF Pages support |
 | Architecture | Full Cloudflare-Native (Approach A) | Single Astro project, no separate backend server |
@@ -27,16 +27,18 @@ Penny is a hosted, multi-tenant SaaS alternative to the self-hosted Piggybank ap
 ```
 User (Browser)
     ↓
-Cloudflare Access (Google OAuth)
-    ↓  (JWT via CF_Authorization cookie)
+Penny Login Page (/login)
+    ↓  "Sign in with Google" → better-auth OAuth flow
+    ↓  Session cookie set on callback
 Cloudflare Pages (Astro SSR on Workers runtime)
-    ├─ Pages: /, /dashboard, /account/[id], /settings
+    ├─ Auth: /api/auth/[...all] → better-auth handler
+    ├─ Pages: /, /login, /dashboard, /account/[id], /settings
     ├─ API Endpoints: /api/accounts, /api/transactions, etc.
     │   └─ Direct D1 bindings (env.DB.prepare(...))
-    ├─ KV: Session data, rate limiting
     └─ Cron Triggers: Daily interest calculation
     ↓
-Cloudflare D1 (SQLite-compatible)
+Cloudflare D1 (user, session, account [OAuth], verification,
+              families, accounts, transactions)
 ```
 
 ### Project Structure
@@ -60,7 +62,8 @@ penny/
 │   │       └── transactions/[...path].ts
 │   ├── lib/
 │   │   ├── db.ts            # D1 query helpers
-│   │   ├── auth.ts          # CF Access JWT verification
+│   │   ├── auth.ts          # better-auth server config (factory for D1)
+│   │   ├── auth-client.ts   # better-auth React client
 │   │   └── interest.ts      # Interest calculator (ported)
 │   └── styles/
 │       └── global.css
@@ -75,7 +78,7 @@ penny/
 
 ### Key Difference from Piggybank
 
-No Express server. Astro server endpoints handle all API logic with direct D1 bindings. Interest cron runs as a Cloudflare Cron Trigger instead of node-cron.
+No Express server. Astro server endpoints handle all API logic with direct D1 bindings. Authentication is handled by better-auth (self-hosted in D1) with Google OAuth for MVP. Interest cron runs as a Cloudflare Cron Trigger instead of node-cron.
 
 ## Database Schema
 
@@ -85,11 +88,19 @@ Row-level isolation via `family_id` on all tables. Single D1 database serves all
 
 ### Schema
 
+better-auth manages 4 tables (`user`, `session`, `account`, `verification`). The app adds 3 tables (`families`, `accounts`, `transactions`). The `user` table has an `additionalFields` column `familyId` linking to `families`.
+
 ```sql
+-- better-auth managed tables (created via better-auth CLI/migrations)
+-- user: id, name, email, emailVerified, image, familyId (FK→families), createdAt, updatedAt
+-- session: id, userId (FK→user), token, expiresAt, ipAddress, userAgent, createdAt, updatedAt
+-- account: id, userId (FK→user), accountId, providerId, accessToken, refreshToken, ..., createdAt, updatedAt
+-- verification: id, identifier, value, expiresAt, createdAt, updatedAt
+
+-- App tables
 CREATE TABLE families (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  owner_email TEXT NOT NULL UNIQUE,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -131,13 +142,15 @@ CREATE INDEX idx_transactions_date ON transactions(transaction_date);
 
 ### Auth Flow
 
-1. User hits any authenticated page
-2. Cloudflare Access intercepts, redirects to OAuth if no valid session
-3. Access sets a `CF_Authorization` JWT cookie
-4. Astro middleware verifies JWT, extracts email
-5. Looks up or creates family record by email
-6. Attaches `family_id` to request context (`Astro.locals.family`)
-7. All DB queries filter by `family_id`
+1. User visits `/login` and clicks "Sign in with Google"
+2. better-auth client calls `authClient.signIn.social({ provider: "google" })`
+3. Redirects to Google OAuth consent screen
+4. Google redirects back to `/api/auth/callback/google`
+5. better-auth creates/updates `user` + `account` rows, creates `session`
+6. On first sign-up, a `databaseHook` auto-creates a `family` and sets `user.familyId`
+7. Session cookie (`better-auth.session_token`) is set
+8. Astro middleware calls `auth.api.getSession()`, attaches `user` (with `familyId`) to `Astro.locals`
+9. All DB queries filter by `familyId`
 
 ## Branding & Visual Identity
 
@@ -179,7 +192,7 @@ CREATE INDEX idx_transactions_date ON transactions(transaction_date);
 
 ## MVP Scope (v0.1)
 
-1. **Authentication**: Cloudflare Access with Google OAuth. Family auto-created on first login.
+1. **Authentication**: better-auth with Google OAuth. Penny-branded login page. Family auto-created on first sign-up via database hook.
 2. **Family Dashboard**: Overview of all children's accounts with balances.
 3. **Account Management**: Create/edit/soft-delete child accounts.
 4. **Transactions**: Deposits, withdrawals with categories. Immutable ledger.
@@ -194,6 +207,7 @@ CREATE INDEX idx_transactions_date ON transactions(transaction_date);
 | Savings goals with progress tracking | High | Visual progress bars per goal |
 | Recurring transactions (auto-allowance) | High | Weekly/monthly auto-deposits |
 | Charts & insights | Medium | Balance over time, spending by category |
+| Email magic links | High | Passwordless alternative to Google OAuth |
 | Apple Sign-In | Medium | Second OAuth provider |
 | Parent PIN for withdrawals | Medium | Port from piggybank prototype |
 | Multiple parents per family | Low | Invite system |
