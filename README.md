@@ -1,123 +1,197 @@
-# Piggybank App
+<p align="center">
+  <img src="docs/images/banner.svg" alt="Piggybank - Teach your kids smart money habits" width="100%"/>
+</p>
 
-A self-hosted virtual piggybank for teaching financial literacy to children. Built with Astro (Frontend) and Express (Backend), designed for easy self-hosting via Docker.
+<p align="center">
+  <strong>A self-hosted virtual piggybank that makes saving fun — and teaches real financial skills.</strong>
+</p>
+
+<p align="center">
+  <a href="#quick-start-docker"><img src="https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
+  <a href="#features"><img src="https://img.shields.io/badge/self--hosted-your%20data-10B981?style=for-the-badge&logo=sqlite&logoColor=white" alt="Self Hosted"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-6366F1?style=for-the-badge" alt="MIT License"></a>
+</p>
+
+---
+
+Kids learn by doing. Piggybank gives them a hands-on way to **deposit allowances, track spending, and watch compound interest grow their balance over time** — all from a simple, friendly interface you host yourself.
+
+No ads. No subscriptions. No third-party data collection. Just a straightforward tool for building money habits that last.
+
+## Why Piggybank?
+
+Most "kids finance" apps are designed to sell something. Piggybank is different:
+
+- **You own the data.** Everything lives in a single SQLite file on your server. No cloud accounts, no vendor lock-in.
+- **Interest that actually teaches.** Configure real compound interest rates and let your kids see their balance grow — daily, weekly, or monthly. It's one thing to explain compound interest; it's another to watch it work.
+- **Built for families.** Create separate accounts for each child, categorize transactions (Allowance, Tooth Fairy, Chores, Gifts), and let kids see exactly where their money comes from and goes.
+- **Deploy in 60 seconds.** One `docker-compose up` and you're running. No databases to configure, no environment variables to wrangle.
 
 ## Features
 
-- **Account Management**: Create and manage accounts for multiple children.
-- **Transactions**: Track deposits, withdrawals, and view history.
-- **Interest**: Automated compound interest calculation (daily, weekly, monthly, etc.).
-- **Security**: Optional parent PIN (Coming Soon).
-- **Self-Hosted**: Full control over your data with SQLite.
-- **Persistent Storage**: Database persists across server restarts and software updates.
-- **Automated Backups**: Daily backups with 30-day retention.
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### Multi-Account Management
+Create individual accounts for each child. Each account tracks its own balance, transaction history, and interest settings independently.
+
+### Transaction Tracking
+Record deposits and withdrawals with categories like **Allowance**, **Tooth Fairy**, **Gift**, **Chore**, **Toy**, **Candy**, and **Savings Goal**. Add notes for context. Edit or remove entries anytime — balances recalculate automatically.
+
+### Compound Interest Engine
+Set a custom APY and compounding period (daily, weekly, monthly, quarterly, or annually) per account. Interest is calculated and credited automatically — kids can even see predictions for their next payout.
+
+</td>
+<td width="50%" valign="top">
+
+### Account Statistics
+At a glance: current balance, total deposits, total withdrawals, lifetime interest earned, account age, and next interest payment estimate.
+
+### Automated Backups
+Daily backups run at 2:00 AM with 30-day retention. Your data is always recoverable.
+
+### Simple, Friendly UI
+Clean design built with Astro, React, and Tailwind CSS. Large text, clear buttons, and a color-coded interface (green for deposits, red for withdrawals) that kids can navigate on their own.
+
+</td>
+</tr>
+</table>
 
 ## Quick Start (Docker)
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/JoelLewis/piggybank.git
-    cd piggybank
-    ```
-
-2.  **Start with Docker Compose**:
-    ```bash
-    docker-compose up -d --build
-    ```
-
-3.  **Access the App**:
-    -   Frontend: `http://localhost:3000`
-    -   Backend API: `http://localhost:4000`
-
-## Manual Development Setup
-
-### Backend
-
-1.  Navigate to `backend/`:
-    ```bash
-    cd backend
-    npm install
-    ```
-2.  Start the server:
-    ```bash
-    npm run start
-    # or for dev
-    npx nodemon server.js
-    ```
-
-### Frontend
-
-1.  Navigate to `frontend/`:
-    ```bash
-    cd frontend
-    npm install
-    ```
-2.  Start development server:
-    ```bash
-    npm run dev
-    ```
-
-## Proxmox LXC Installation
-
-1.  Create a standard LXC container (Debian/Ubuntu).
-2.  Install Docker and Docker Compose inside the LXC.
-3.  Clone this repo and run `docker-compose up -d`.
-4.  (Optional) Use a reverse proxy like Caddy or Nginx to serve on a domain.
-
-## Database & Data Persistence
-
-### Storage Location
-
-All data is stored in the `./data/` directory:
-- **Database**: `./data/piggybank.db` (SQLite)
-- **Backups**: `./data/backups/` (Daily automated backups)
-
-This directory is mounted as a Docker volume, ensuring your data persists across:
-- Container restarts
-- Software updates (via `docker-compose pull` and restart)
-- Server reboots
-
-### Automated Backups
-
-Daily backups run automatically at 2:00 AM:
-- Retention: 30 days
-- Location: `./data/backups/piggybank_backup_YYYYMMDD_HHMMSS.db`
-
-### Manual Backup
-
 ```bash
-# While running
-docker-compose exec backend sqlite3 /app/data/piggybank.db ".backup /app/data/backups/manual_$(date +%Y%m%d_%H%M%S).db"
+git clone https://github.com/JoelLewis/piggybank.git
+cd piggybank
+docker-compose up -d --build
 ```
 
-### Restore from Backup
+Open [http://localhost:3000](http://localhost:3000) and create your first account.
+
+> **That's it.** The backend API runs on port 4000, the frontend on port 3000. Data is stored in `./data/piggybank.db` and persists across restarts.
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Browser (localhost:3000)                                    │
+│  ┌───────────────┐  ┌──────────────┐  ┌──────────────────┐ │
+│  │  Dashboard     │  │  Account     │  │  Transaction     │ │
+│  │  (All Kids)    │→ │  Details     │→ │  History         │ │
+│  └───────────────┘  └──────────────┘  └──────────────────┘ │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ API Proxy
+┌──────────────────────────▼──────────────────────────────────┐
+│  Backend (localhost:4000)                                    │
+│  ┌──────────┐  ┌───────────────┐  ┌──────────────────────┐ │
+│  │ Accounts │  │ Transactions  │  │ Interest Calculator  │ │
+│  │ API      │  │ API           │  │ (Daily Cron Job)     │ │
+│  └────┬─────┘  └───────┬───────┘  └──────────┬───────────┘ │
+│       └────────────────┬┘                     │             │
+│                   ┌────▼─────────────────────▼┐            │
+│                   │  SQLite (./data/)          │            │
+│                   └───────────────────────────┘            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | [Astro](https://astro.build) + [React](https://react.dev) + [Tailwind CSS](https://tailwindcss.com) + TypeScript |
+| **Backend** | [Express](https://expressjs.com) (Node.js) |
+| **Database** | SQLite |
+| **Icons** | [Lucide](https://lucide.dev) |
+| **Deployment** | Docker (multi-stage build, Alpine Linux) |
+
+## Development Setup
+
+<details>
+<summary><strong>Backend</strong></summary>
 
 ```bash
-# Stop the application
+cd backend
+npm install
+npm run start        # production
+npx nodemon server.js  # development (hot-reload)
+```
+
+Runs on `http://localhost:4000`.
+
+</details>
+
+<details>
+<summary><strong>Frontend</strong></summary>
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Runs on `http://localhost:3000`.
+
+</details>
+
+## Deployment
+
+### Docker Compose (Recommended)
+
+The included `docker-compose.yml` handles everything. Data persists in `./data/`:
+
+```yaml
+volumes:
+  - ./data:/app/data   # Database + backups
+```
+
+### Proxmox LXC
+
+1. Create a standard LXC container (Debian/Ubuntu)
+2. Install Docker and Docker Compose inside the LXC
+3. Clone this repo and run `docker-compose up -d --build`
+4. (Optional) Put a reverse proxy (Caddy, Nginx, Traefik) in front for HTTPS
+
+## Data & Backups
+
+| What | Where |
+|------|-------|
+| Database | `./data/piggybank.db` |
+| Backups | `./data/backups/piggybank_backup_YYYYMMDD_HHMMSS.db` |
+| Schedule | Daily at 2:00 AM, 30-day retention |
+
+**Manual backup:**
+
+```bash
+docker-compose exec backend sqlite3 /app/data/piggybank.db \
+  ".backup /app/data/backups/manual_$(date +%Y%m%d_%H%M%S).db"
+```
+
+**Restore from backup:**
+
+```bash
 docker-compose down
-
-# Restore database
 cp data/backups/piggybank_backup_YYYYMMDD_HHMMSS.db data/piggybank.db
-
-# Restart
 docker-compose up -d
 ```
 
-### Upgrading
-
-To update to the latest version:
+## Upgrading
 
 ```bash
-# Pull latest changes
 git pull origin main
-
-# Rebuild and restart (data persists automatically)
 docker-compose down
 docker-compose up -d --build
 ```
 
-Your database at `./data/piggybank.db` will automatically work with the new version. Schema updates are applied automatically on startup.
+Schema migrations run automatically on startup. Your data is preserved.
+
+## Roadmap
+
+- [ ] Parental PIN protection for withdrawals and settings
+- [ ] Savings goals with progress tracking
+- [ ] Charts and visual spending/saving insights
+- [ ] Recurring transactions (weekly allowance)
+- [ ] Multi-family / user authentication
 
 ## License
 
-MIT
+[MIT](LICENSE) — use it however you like.
