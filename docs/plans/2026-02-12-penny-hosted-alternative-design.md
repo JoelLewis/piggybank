@@ -16,8 +16,8 @@ Penny is a hosted, multi-tenant SaaS alternative to the self-hosted Piggybank ap
 | User model | Multi-tenant SaaS | Single deployment serving all families |
 | Authentication | better-auth + Google OAuth | Self-hosted auth in D1, Penny-branded login, no per-user cost, future-ready for magic links |
 | Database | Cloudflare D1 (SQLite-compatible) | Existing SQL queries port directly |
-| Frontend framework | Astro + React + Tailwind | Reuse piggybank stack, first-class CF Pages support |
-| Architecture | Full Cloudflare-Native (Approach A) | Single Astro project, no separate backend server |
+| Frontend framework | SvelteKit 2 + Svelte 5 + Tailwind CSS 4 | Better fit for interactive dashboard (form actions, load functions, client-side routing) |
+| Architecture | Full Cloudflare-Native (Approach A) | Single SvelteKit project, no separate backend server |
 | Visual identity | Modern fintech + warm | Sophisticated yet family-oriented |
 
 ## Architecture
@@ -30,12 +30,12 @@ User (Browser)
 Penny Login Page (/login)
     ↓  "Sign in with Google" → better-auth OAuth flow
     ↓  Session cookie set on callback
-Cloudflare Pages (Astro SSR on Workers runtime)
-    ├─ Auth: /api/auth/[...all] → better-auth handler
+Cloudflare Pages (SvelteKit on Workers runtime)
+    ├─ Auth: /api/auth/[...all]/+server.ts → better-auth handler
     ├─ Pages: /, /login, /dashboard, /account/[id], /settings
-    ├─ API Endpoints: /api/accounts, /api/transactions, etc.
-    │   └─ Direct D1 bindings (env.DB.prepare(...))
-    └─ Cron Triggers: Daily interest calculation
+    ├─ Load functions: +page.server.ts (D1 queries via platform.env.DB)
+    ├─ Form actions: +page.server.ts (deposits, withdrawals, CRUD)
+    └─ Cron Triggers: Daily interest via protected API endpoint
     ↓
 Cloudflare D1 (user, session, account [OAuth], verification,
               families, accounts, transactions)
@@ -46,39 +46,52 @@ Cloudflare D1 (user, session, account [OAuth], verification,
 ```
 penny/
 ├── src/
-│   ├── components/          # React components
-│   │   ├── AccountCard.tsx
-│   │   ├── TransactionForm.tsx
-│   │   ├── TransactionList.tsx
-│   │   └── ui/             # Shared UI primitives
-│   ├── layouts/
-│   │   └── BaseLayout.astro
-│   ├── pages/
-│   │   ├── index.astro      # Landing/marketing page
-│   │   ├── dashboard.astro  # Authenticated family dashboard
-│   │   ├── account/[id].astro
-│   │   └── api/             # Server endpoints (replace Express)
-│   │       ├── accounts/[...path].ts
-│   │       └── transactions/[...path].ts
+│   ├── routes/
+│   │   ├── +layout.svelte         # Root layout
+│   │   ├── +layout.server.ts      # Root load (session)
+│   │   ├── +page.svelte           # Landing page
+│   │   ├── login/+page.svelte     # Login page
+│   │   ├── dashboard/
+│   │   │   ├── +page.svelte       # Family dashboard
+│   │   │   └── +page.server.ts    # Load accounts
+│   │   ├── account/
+│   │   │   ├── new/               # Create account (form action)
+│   │   │   └── [id]/
+│   │   │       ├── +page.svelte   # Account detail
+│   │   │       ├── +page.server.ts # Load + form actions (deposit/withdraw/interest)
+│   │   │       └── settings/      # Account settings (update/delete)
+│   │   ├── settings/              # Global settings + sign-out
+│   │   └── api/auth/[...all]/+server.ts  # better-auth catch-all
 │   ├── lib/
-│   │   ├── db.ts            # D1 query helpers
-│   │   ├── auth.ts          # better-auth server config (factory for D1)
-│   │   ├── auth-client.ts   # better-auth React client
-│   │   └── interest.ts      # Interest calculator (ported)
-│   └── styles/
-│       └── global.css
-├── migrations/               # D1 schema migrations
+│   │   ├── server/
+│   │   │   ├── auth.ts            # better-auth server config (factory for D1)
+│   │   │   ├── db.ts              # D1 query helpers
+│   │   │   ├── validation.ts      # Input validation
+│   │   │   └── interest.ts        # Interest calculator (ported)
+│   │   ├── components/            # Svelte components
+│   │   │   ├── AccountCard.svelte
+│   │   │   ├── TransactionForm.svelte
+│   │   │   ├── TransactionList.svelte
+│   │   │   ├── Nav.svelte
+│   │   │   └── Toast.svelte
+│   │   ├── auth-client.ts         # better-auth Svelte client
+│   │   └── utils.ts               # Shared utilities (cn, formatCurrency)
+│   ├── app.html                   # HTML template
+│   ├── app.css                    # Global styles + Tailwind
+│   ├── app.d.ts                   # TypeScript declarations
+│   └── hooks.server.ts            # Auth middleware
+├── migrations/
 │   └── 0001_initial.sql
-├── astro.config.mjs
-├── wrangler.toml             # CF Workers/D1/KV bindings
-├── tailwind.config.mjs
+├── svelte.config.js
+├── vite.config.ts
+├── wrangler.toml
 ├── package.json
 └── CLAUDE.md
 ```
 
 ### Key Difference from Piggybank
 
-No Express server. Astro server endpoints handle all API logic with direct D1 bindings. Authentication is handled by better-auth (self-hosted in D1) with Google OAuth for MVP. Interest cron runs as a Cloudflare Cron Trigger instead of node-cron.
+No Express server. SvelteKit load functions and form actions handle all server logic with direct D1 bindings. Authentication is handled by better-auth (self-hosted in D1) with Google OAuth for MVP. Auth middleware runs in `hooks.server.ts`. Interest cron runs via a protected API endpoint triggered by Cloudflare Cron.
 
 ## Database Schema
 
@@ -149,7 +162,7 @@ CREATE INDEX idx_transactions_date ON transactions(transaction_date);
 5. better-auth creates/updates `user` + `account` rows, creates `session`
 6. On first sign-up, a `databaseHook` auto-creates a `family` and sets `user.familyId`
 7. Session cookie (`better-auth.session_token`) is set
-8. Astro middleware calls `auth.api.getSession()`, attaches `user` (with `familyId`) to `Astro.locals`
+8. SvelteKit `hooks.server.ts` calls `auth.api.getSession()`, attaches `user` (with `familyId`) to `event.locals`
 9. All DB queries filter by `familyId`
 
 ## Branding & Visual Identity
@@ -173,7 +186,7 @@ CREATE INDEX idx_transactions_date ON transactions(transaction_date);
 
 ### Typography
 
-- **Headings**: DM Sans or Plus Jakarta Sans (Google Fonts)
+- **Headings**: Plus Jakarta Sans (Google Fonts)
 - **Body**: Same family at lighter weights
 - **Numbers/Money**: Tabular figures, heavier weight
 
@@ -221,8 +234,8 @@ CREATE INDEX idx_transactions_date ON transactions(transaction_date);
 | Interest calculator logic | Port directly |
 | Transaction validation | Port, adapt to Astro middleware |
 | SQL queries | Adapt - add family_id, D1 syntax |
-| React components | Rewrite with new design system |
-| Express routes | Rewrite as Astro server endpoints |
+| React components | Rewrite as Svelte 5 components with new design system |
+| Express routes | Rewrite as SvelteKit load functions + form actions |
 | Database init/migrations | Rewrite for D1 |
 | Docker setup | Drop (Cloudflare deployment) |
-| Cron job | Rewrite as Cloudflare Cron Trigger |
+| Cron job | Rewrite as protected API endpoint + Cloudflare Cron Trigger |
