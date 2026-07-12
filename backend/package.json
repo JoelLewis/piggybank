@@ -30,5 +30,6 @@
     "testMatch": [
       "**/__tests__/**/*.test.js"
     ]
-  }
+  },
+  "packageManager": "pnpm@11.9.0"
 }
